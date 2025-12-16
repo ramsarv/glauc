@@ -1,27 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch'); // Ensure you have node-fetch installed: npm install node-fetch
+const fetch = require('node-fetch');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors()); // Allow cross-origin requests from your React app
+// Allow requests from your Vercel deployment
+app.use(cors({
+  origin: "*", // For production, restrict this to your Vercel domain later
+  methods: ["GET", "POST"]
+}));
+
 app.use(express.json());
 
-// --- CONFIGURATION ---
-// Ideally, put this in a .env file (process.env.GEMINI_API_KEY)
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+// Ideally, set GEMINI_API_KEY in Vercel Settings > Environment Variables
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 
-// --- ROUTES ---
-
-// 1. Health Check
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.send('Glauc Backend Server is Running');
 });
 
-// 2. AI Analysis Endpoint
-// This endpoint receives a prompt from the frontend, calls Gemini securely, and returns the result.
 app.post('/api/glauc/analyze', async (req, res) => {
   const { prompt } = req.body;
 
@@ -42,6 +39,8 @@ app.post('/api/glauc/analyze', async (req, res) => {
     );
 
     if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error("Gemini API Error:", errorText);
       throw new Error(`Gemini API Error: ${geminiResponse.statusText}`);
     }
 
@@ -56,7 +55,5 @@ app.post('/api/glauc/analyze', async (req, res) => {
   }
 });
 
-// --- START SERVER ---
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// EXPORT THE APP FOR VERCEL (Do not use app.listen)
+module.exports = app;
